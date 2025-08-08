@@ -9,6 +9,7 @@ add_executable(itacati_server
     src/main.cpp
     src/api/HttpServer.cpp
     src/core/CallManager.cpp
+    src/sip/SipStackDummy.hpp
 )
 
 # 后续：

@@ -6,6 +6,8 @@
 #include <cstdlib>
 
 #include "api/HttpServer.hpp"
+#include "core/CallManager.hpp"
+#include "sip/SipStackDummy.hpp"
 
 namespace {
 std::atomic<bool> g_running{true};
@@ -30,6 +32,8 @@ int main() {
             std::string("{\"type\":\"answer\",\"sdp\":\"") + "stub" + "\"}"};
     });
     static itacati::core::CallManager cm;
+    static itacati::sip::SipStackDummy sip;
+    sip.attach_call_manager(&cm);
     http.handle("POST", "/call/make", [](const itacati::api::HttpRequest& req){
         std::string dst="";
         auto p = req.body.find("\"dst\"");

@@ -5,6 +5,8 @@
 // 占位：pjsip 封装接口（注册/呼叫/保持/转接/DTMF/订阅/会话定时器）
 // 后续提供实现文件，并链接 pjsip/pjmedia/pjnath/libsrtp。
 
+namespace itacati { namespace core { class CallManager; } }
+
 namespace itacati::sip {
 
 struct CallEvent {
@@ -18,6 +20,9 @@ using EventCallback = std::function<void(const CallEvent&)>;
 
 class SipStack {
 public:
+    // 仅用于 demo：让 Dummy 实现能驱动内存 CallManager
+    void attach_call_manager(core::CallManager* cm);
+
     bool init(const std::string& bind_ip, int port, bool tls);
     bool register_account(const std::string& uri, const std::string& user,
                           const std::string& password);
