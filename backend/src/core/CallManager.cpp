@@ -26,6 +26,7 @@ void CallManager::emit(const std::string& type, const std::string& call_id, cons
     std::lock_guard<std::mutex> lk(ev_mtx_);
     Event e; e.id = ++ev_seq_; e.type=type; e.callId=call_id; e.data=data; e.ts=now_ms();
     events_.push_back(std::move(e));
+    ev_cv_.notify_all();
 }
 
 std::string CallManager::make_call(const std::string& dst) {
@@ -33,7 +34,6 @@ std::string CallManager::make_call(const std::string& dst) {
     Call c; c.id = rand_id(); c.dst = dst; c.state = CallState::Ringing;
     calls_.emplace(c.id, c);
     emit("call.ringing", c.id, "{}");
-    // 模拟 300ms 后接通
     std::thread([this, id=c.id]{ std::this_thread::sleep_for(std::chrono::milliseconds(300));
         {
             std::lock_guard<std::mutex> lk(mtx_);
@@ -76,6 +76,18 @@ bool CallManager::unhold(const std::string& call_id) {
 
 std::vector<Event> CallManager::poll(uint64_t since_id, size_t maxn) {
     std::lock_guard<std::mutex> lk(ev_mtx_);
+    std::vector<Event> out; out.reserve(maxn);
+    for (auto &e : events_) {
+        if (e.id > since_id) { out.push_back(e); if (out.size()>=maxn) break; }
+    }
+    return out;
+}
+
+std::vector<Event> CallManager::wait_poll(uint64_t since_id, uint32_t timeout_ms, size_t maxn) {
+    std::unique_lock<std::mutex> lk(ev_mtx_);
+    auto pred = [&]{ return !events_.empty() && events_.back().id > since_id; };
+    if (timeout_ms == 0) ev_cv_.wait(lk, pred);
+    else ev_cv_.wait_for(lk, std::chrono::milliseconds(timeout_ms), pred);
     std::vector<Event> out; out.reserve(maxn);
     for (auto &e : events_) {
         if (e.id > since_id) { out.push_back(e); if (out.size()>=maxn) break; }
