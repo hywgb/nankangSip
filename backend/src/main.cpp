@@ -28,20 +28,40 @@ int main() {
         return itacati::api::HttpResponse{200, "application/json",
             std::string("{\"type\":\"answer\",\"sdp\":\"") + "stub" + "\"}"};
     });
-    http.handle("POST", "/call/make", [](const itacati::api::HttpRequest&){
+    static itacati::core::CallManager cm;
+    http.handle("POST", "/call/make", [](const itacati::api::HttpRequest& req){
+        std::string dst="";
+        auto p = req.body.find("\"dst\"");
+        if (p!=std::string::npos){ auto q=req.body.find(':',p); auto s=req.body.find('"',q+1); auto e=req.body.find('"',s+1); if (s!=std::string::npos&&e!=std::string::npos) dst=req.body.substr(s+1,e-s-1);}        
+        auto id = cm.make_call(dst.empty()?"10086":dst);
+        std::string body = std::string("{\"callId\":\"")+id+"\"}";
+        return itacati::api::HttpResponse{200, "application/json", body};
+    });
+    http.handle("POST", "/call/hangup", [](const itacati::api::HttpRequest& req){
+        std::string id=""; auto p=req.body.find("callId"); if (p!=std::string::npos){auto q=req.body.find(':',p); auto s=req.body.find('"',q+1); auto e=req.body.find('"',s+1); if(s!=std::string::npos&&e!=std::string::npos) id=req.body.substr(s+1,e-s-1);}        
+        bool ok = cm.hangup(id);
+        return itacati::api::HttpResponse{200, "application/json", ok?"{\"ok\":true}":"{\"ok\":false}"};
+    });
+    http.handle("POST", "/call/hold", [](const itacati::api::HttpRequest& req){
+        std::string id=""; auto p=req.body.find("callId"); if (p!=std::string::npos){auto q=req.body.find(':',p); auto s=req.body.find('"',q+1); auto e=req.body.find('"',s+1); if(s!=std::string::npos&&e!=std::string::npos) id=req.body.substr(s+1,e-s-1);}        
+        bool ok = cm.hold(id);
+        return itacati::api::HttpResponse{200, "application/json", ok?"{\"ok\":true}":"{\"ok\":false}"};
+    });
+    http.handle("POST", "/call/unhold", [](const itacati::api::HttpRequest& req){
+        std::string id=""; auto p=req.body.find("callId"); if (p!=std::string::npos){auto q=req.body.find(':',p); auto s=req.body.find('"',q+1); auto e=req.body.find('"',s+1); if(s!=std::string::npos&&e!=std::string::npos) id=req.body.substr(s+1,e-s-1);}        
+        bool ok = cm.unhold(id);
+        return itacati::api::HttpResponse{200, "application/json", ok?"{\"ok\":true}":"{\"ok\":false}"};
+    });
+    http.handle("POST", "/call/transfer", [](const itacati::api::HttpRequest& req){
+        // demo 不实现咨询转，仅返回 ok
         return itacati::api::HttpResponse{200, "application/json", "{\"ok\":true}"};
     });
-    http.handle("POST", "/call/hangup", [](const itacati::api::HttpRequest&){
-        return itacati::api::HttpResponse{200, "application/json", "{\"ok\":true}"};
-    });
-    http.handle("POST", "/call/hold", [](const itacati::api::HttpRequest&){
-        return itacati::api::HttpResponse{200, "application/json", "{\"ok\":true}"};
-    });
-    http.handle("POST", "/call/unhold", [](const itacati::api::HttpRequest&){
-        return itacati::api::HttpResponse{200, "application/json", "{\"ok\":true}"};
-    });
-    http.handle("POST", "/call/transfer", [](const itacati::api::HttpRequest&){
-        return itacati::api::HttpResponse{200, "application/json", "{\"ok\":true}"};
+    http.handle("GET", "/events/poll", [](const itacati::api::HttpRequest& req){
+        uint64_t since=0; auto p=req.path.find("since="); if (p!=std::string::npos){ since = std::strtoull(req.path.c_str()+p+6,nullptr,10);}        
+        auto evs = cm.poll(since, 100);
+        std::string out = "["; bool first=true; for (auto &e: evs){ if(!first) out+=","; first=false; out += "{\\\"id\\\":"+std::to_string(e.id)+",\\\"type\\\":\\\""+e.type+"\\\",\\\"callId\\\":\\\""+e.callId+"\\\",\\\"ts\\\":"+std::to_string(e.ts)+"}"; }
+        out += "]";
+        return itacati::api::HttpResponse{200, "application/json", out};
     });
 
     http.start("0.0.0.0", 8080);
