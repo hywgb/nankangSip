@@ -7,6 +7,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_executable(itacati_server
     src/main.cpp
+    src/api/HttpServer.cpp
 )
 
 # 后续：
