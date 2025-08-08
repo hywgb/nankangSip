@@ -15,6 +15,28 @@ static std::string key(const std::string& m, const std::string& p) {
     return m + ":" + p;
 }
 
+std::string HttpServer::route_key(const std::string& method, const std::string& path) {
+    auto bp = base_path(path);
+    return key(method, bp);
+}
+
+std::string HttpServer::base_path(const std::string& path) {
+    auto q = path.find('?');
+    if (q == std::string::npos) return path;
+    return path.substr(0, q);
+}
+
+std::string HttpServer::query(const std::string& path, const std::string& k) {
+    auto q = path.find('?'); if (q==std::string::npos) return {};
+    auto s = path.substr(q+1);
+    std::string key = k + "=";
+    auto p = s.find(key);
+    if (p==std::string::npos) return {};
+    auto v = s.substr(p+key.size());
+    auto amp = v.find('&'); if (amp!=std::string::npos) v = v.substr(0,amp);
+    return v;
+}
+
 bool HttpServer::start(const std::string& bind_ip, int port) {
     if (running_) return true;
     bind_ip_ = bind_ip; port_ = port; running_ = true;
@@ -68,7 +90,7 @@ void HttpServer::run_loop() {
         HttpRequest hreq{method, path, body};
 
         HttpResponse hres; // default 200 {}
-        auto it = routes_.find(key(method, path));
+        auto it = routes_.find(key(method, base_path(path)));
         if (it != routes_.end()) hres = it->second(hreq);
         else { hres.status=404; hres.body = "{\"error\":\"not found\"}"; }
 

@@ -37,7 +37,7 @@ export default function App() {
 
   async function poll() {
     try {
-      const res = await fetch(`/events/poll?since=${sinceRef.current}`)
+      const res = await fetch(`/events/poll?since=${sinceRef.current}&timeout=10000`)
       const arr = await res.json()
       if (Array.isArray(arr)) {
         for (const e of arr) {
@@ -46,11 +46,16 @@ export default function App() {
         }
       }
     } catch(e) { /* ignore */ }
+    finally {
+      // 立即发起下一次 long-poll
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(poll, 0)
+    }
   }
 
   useEffect(()=>{
-    timerRef.current = setInterval(poll, 800)
-    return ()=> clearInterval(timerRef.current)
+    poll()
+    return ()=> clearTimeout(timerRef.current)
   },[])
 
   return (

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
+#include <cstdlib>
 
 #include "api/HttpServer.hpp"
 
@@ -57,8 +58,15 @@ int main() {
         return itacati::api::HttpResponse{200, "application/json", "{\"ok\":true}"};
     });
     http.handle("GET", "/events/poll", [](const itacati::api::HttpRequest& req){
-        uint64_t since=0; auto p=req.path.find("since="); if (p!=std::string::npos){ since = std::strtoull(req.path.c_str()+p+6,nullptr,10);}        
-        auto evs = cm.poll(since, 100);
+        uint64_t since = 0; {
+            auto sv = itacati::api::HttpServer::query(req.path, "since");
+            if (!sv.empty()) since = std::strtoull(sv.c_str(), nullptr, 10);
+        }
+        uint32_t timeout = 0; {
+            auto tv = itacati::api::HttpServer::query(req.path, "timeout");
+            if (!tv.empty()) timeout = static_cast<uint32_t>(std::strtoul(tv.c_str(), nullptr, 10));
+        }
+        auto evs = (timeout>0) ? cm.wait_poll(since, timeout, 100) : cm.poll(since, 100);
         std::string out = "["; bool first=true; for (auto &e: evs){ if(!first) out+=","; first=false; out += "{\\\"id\\\":"+std::to_string(e.id)+",\\\"type\\\":\\\""+e.type+"\\\",\\\"callId\\\":\\\""+e.callId+"\\\",\\\"ts\\\":"+std::to_string(e.ts)+"}"; }
         out += "]";
         return itacati::api::HttpResponse{200, "application/json", out};
