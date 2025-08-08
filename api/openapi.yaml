@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: ITACATI Signaling API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /webrtc/offer:
+    post:
+      summary: Submit browser SDP offer, returns answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: string, example: offer }
+                sdp:  { type: string }
+      responses:
+        '200':
+          description: SDP answer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: { type: string, example: answer }
+                  sdp:  { type: string }
+  /call/make:
+    post:
+      summary: Make an outbound call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dst: { type: string, description: SIP URI / Number }
+      responses:
+        '200':
+          description: OK
+  /call/hangup:
+    post:
+      summary: Hang up a call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callId: { type: string }
+      responses:
+        '200':
+          description: OK
+  /call/hold:
+    post:
+      summary: Hold a call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callId: { type: string }
+      responses:
+        '200':
+          description: OK
+  /call/unhold:
+    post:
+      summary: Unhold a call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callId: { type: string }
+      responses:
+        '200':
+          description: OK
+  /call/transfer:
+    post:
+      summary: Blind transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callId: { type: string }
+                target: { type: string }
+      responses:
+        '200':
+          description: OK

@@ -1,0 +1,17 @@
+# build
+/backend/build/
+/build/
+*.o
+*.obj
+*.pdb
+*.dll
+*.so
+*.dylib
+
+# node
+/web/node_modules/
+/web/dist/
+
+# OS
+.DS_Store
+Thumbs.db
